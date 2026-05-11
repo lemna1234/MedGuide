@@ -1,11 +1,41 @@
-<div align="center">
+# MedGuide - 导诊导医 AI 助手
 
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
+基于 Google Gemini AI 的智慧医院导诊系统。它可以帮助患者快速识别挂号科室、查询医院设施路线，并提供基于医疗百科（华佗数据集）的科普问答。
 
-  <h1>Built with AI Studio</h2>
+## 核心功能
+- **智能导诊**：根据症状描述推荐科室。
+- **医院导航**：提供缴费处、检验科等设施的楼层和详细指引。
+- **医疗 QA**：集成 `huatuo_encyclopedia_qa` 数据集，无需向量数据库即可进行轻量级 RAG 检索。
+- **免责声明**：所有医学回复均附带合规的免责声明。
 
-  <p>The fastest path from prompt to production with Gemini.</p>
+## 技术栈
+- **前端**：React 19 + TypeScript + Vite
+- **UI & 动画**：Tailwind CSS + Motion + Lucide Icons
+- **AI 模型**：Google Gemini 2.0 Flash
+- **检索增强 (RAG)**：基于本地 JSON (`datasets.json`) 的关键词加权匹配算法。
 
-  <a href="https://aistudio.google.com/apps">Start building</a>
+## 开始运行
 
-</div>
+### 1. 获取 API Key
+访问 [Google AI Studio](https://aistudio.google.com/) 获取你的 Gemini API Key。
+
+### 2. 配置环境变量
+在项目根目录创建 `.env` 文件：
+```env
+GEMINI_API_KEY="YOUR_API_KEY_HERE"
+```
+
+### 3. 安装并启动
+```bash
+# 安装依赖
+npm install
+
+# 启动开发服务器
+npm run dev
+```
+
+## 数据集说明
+本项目在 `src/data/datasets.json` 中采用了 `huatuo_encyclopedia_qa` 的精简版数据。为了支持轻量级运行，系统采用了一种基于关键词命中的检索算法替代了繁重的向量数据库，适合部署在低算力环境下。
+
+---
+*免责声明：本项目仅供学习和科普参考，不代表专业医疗诊断意见。*

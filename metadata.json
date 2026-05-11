@@ -1,0 +1,6 @@
+{
+  "name": "MedGuide - 导诊导医AI助手",
+  "description": "基于AI的智慧导诊与医院导航系统，帮助患者快速对接科室并提供院内路线指引，集成医疗百科问答。",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}
