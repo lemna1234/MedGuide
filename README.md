@@ -11,18 +11,18 @@
 ## 技术栈
 - **前端**：React 19 + TypeScript + Vite
 - **UI & 动画**：Tailwind CSS + Motion + Lucide Icons
-- **AI 模型**：MiniMax-Text-01 (via OpenRouter)
+- **AI 模型**：GLM-4-Flash (Zhipu AI)
 - **检索增强 (RAG)**：基于本地 JSON (`datasets.json`) 的关键词加权匹配算法。
 
 ## 开始运行
 
 ### 1. 获取 API Key
-访问 [OpenRouter](https://openrouter.ai/) 获取 API Key，并确保你的账户有权限访问 `minimax/minimax-01`。
+访问 [智谱 AI 开放平台](https://open.bigmodel.cn/) 获取 API Key。
 
 ### 2. 配置环境变量
 在项目根目录创建 `.env` 文件：
 ```env
-MINIMAX_API_KEY="YOUR_OPENROUTER_API_KEY"
+ZHIPU_API_KEY="YOUR_ZHIPU_API_KEY"
 ```
 
 ### 3. 安装并启动
