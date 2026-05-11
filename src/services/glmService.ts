@@ -3,34 +3,30 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { GoogleGenAI, Type } from "@google/genai";
+import OpenAI from "openai";
 import { hospitalDepartments, commonServiceLocations } from "../data/hospitalData";
 import { searchMedicalKnowledge } from "../data/medicalKnowledge";
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+// 智谱 AI 兼容 OpenAI 格式
+const client = new OpenAI({
+  apiKey: process.env.GLM_API_KEY,
+  baseURL: "https://open.bigmodel.cn/api/paas/v4/",
+  dangerouslyAllowBrowser: true // 警告：仅用于预览演示
+});
 
 export interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
 }
 
-/**
- * 意图识别结果
- */
 interface IntentResult {
   intent: 'DEPARTMENT_GUIDE' | 'ROUTE_GUIDE' | 'MEDICAL_QA' | 'CHITCHAT';
   entities: string[];
 }
 
-/**
- * 核心 AI 导诊服务
- */
 export class HospitalAgentService {
-  private static model = "gemini-3-flash-preview";
+  private static model = "glm-4"; // 使用 GLM-4 模型
 
-  /**
-   * 识别用户意图
-   */
   private static async identifyIntent(query: string): Promise<IntentResult> {
     const prompt = `你是一个专业的医院导诊台AI。请分析用户的输入，判断其意图和关键实体。
 输入: "${query}"
@@ -44,52 +40,36 @@ export class HospitalAgentService {
 请以 JSON 格式返回: { "intent": "分类名", "entities": ["关键实体1", "实体2"] }`;
 
     try {
-      const response = await ai.models.generateContent({
+      const response = await client.chat.completions.create({
         model: this.model,
-        contents: prompt,
-        config: {
-          responseMimeType: "application/json",
-          responseSchema: {
-            type: Type.OBJECT,
-            properties: {
-              intent: { type: Type.STRING },
-              entities: { type: Type.ARRAY, items: { type: Type.STRING } }
-            },
-            required: ["intent", "entities"]
-          }
-        }
+        messages: [{ role: "user", content: prompt }],
+        response_format: { type: "json_object" }
       });
 
-      const result = JSON.parse(response.text || '{}');
-      return result as IntentResult;
+      const content = response.choices[0].message.content || '{}';
+      return JSON.parse(content) as IntentResult;
     } catch (e) {
       console.error("Intent Error:", e);
       return { intent: 'CHITCHAT', entities: [] };
     }
   }
 
-  /**
-   * 处理导诊/导航/问答
-   */
   public static async processMessage(query: string, history: ChatMessage[] = []): Promise<string> {
     const { intent, entities } = await this.identifyIntent(query);
 
     let context = "";
 
     if (intent === 'DEPARTMENT_GUIDE') {
-      // 提供科室数据作为上下文
       context = `医院科室信息: ${JSON.stringify(hospitalDepartments)}`;
     } else if (intent === 'ROUTE_GUIDE') {
-      // 提供地点数据作为上下文
       context = `医院设施位置: ${JSON.stringify(commonServiceLocations)}. 
       科室位置: ${JSON.stringify(hospitalDepartments.map(d => ({ name: d.name, floor: d.floor, building: d.building })))}`;
     } else if (intent === 'MEDICAL_QA') {
-      // 模拟 RAG: 从华佗 QA 数据集中检索相关片段
       const relevantQA = await searchMedicalKnowledge(query);
       if (relevantQA.length > 0) {
         context = `相关医疗知识参考: ${relevantQA.map(r => `问: ${r.question} 答: ${r.answer}`).join('\n')}`;
       } else {
-        context = "没有找到确切的背景知识。请基于你的专业医学知识，并明确告知仅供参考。";
+        context = "没有找到确切的背景知识。请基于你的专业医学知识回复。";
       }
     }
 
@@ -100,22 +80,22 @@ export class HospitalAgentService {
 4. **语言**: 使用礼貌、专业的中文。
 
 当前背景上下文:
-${context}
-
-用户当前输入: "${query}"`;
+${context}`;
 
     try {
-      const response = await ai.models.generateContent({
+      const response = await client.chat.completions.create({
         model: this.model,
-        contents: [
-          { role: 'user', parts: [{ text: systemPrompt }] }
+        messages: [
+          { role: "system", content: systemPrompt },
+          ...history.map(m => ({ role: m.role as "user" | "assistant", content: m.content })),
+          { role: "user", content: query }
         ]
       });
 
-      return response.text || "抱歉，我现在遇到一点小故障。";
+      return response.choices[0].message.content || "抱歉，回复生成失败。";
     } catch (e) {
       console.error("Process Message Error:", e);
-      return "抱歉，服务器暂时无法响应您的咨询。";
+      return "抱歉，连接智谱 AI 失败。";
     }
   }
 }
