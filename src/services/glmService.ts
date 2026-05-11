@@ -8,8 +8,16 @@ import { hospitalDepartments, commonServiceLocations } from "../data/hospitalDat
 import { searchMedicalKnowledge } from "../data/medicalKnowledge";
 
 // 智谱 AI 官方 API 端点
+const getApiKey = () => {
+  // 优先尝试从 define 注入的变量获取
+  // @ts-ignore
+  return process.env.ZHIPU_API_KEY || import.meta.env.VITE_ZHIPU_API_KEY;
+};
+
+const apiKey = getApiKey();
+
 const client = new OpenAI({
-  apiKey: process.env.ZHIPU_API_KEY,
+  apiKey: apiKey || "missing-key", // 避免构造函数直接报错，在调用时处理
   baseURL: "https://open.bigmodel.cn/api/paas/v4/",
   dangerouslyAllowBrowser: true 
 });
@@ -25,10 +33,11 @@ interface IntentResult {
 }
 
 export class HospitalAgentService {
-  // 模型 ID: glm-4-flash (平衡速度与能力的最佳选择)
-  private static model = "glm-4-flash"; 
+  // 模型 ID: glm-4.7-flash
+  private static model = "glm-4.7-flash"; 
 
   private static async identifyIntent(query: string): Promise<IntentResult> {
+    if (!apiKey) throw new Error("请在 Settings -> Secrets 中配置 ZHIPU_API_KEY");
     const prompt = `你是一个专业的医院导诊台AI。请分析用户的输入，判断其意图和关键实体。
 输入: "${query}"
 
@@ -56,6 +65,8 @@ export class HospitalAgentService {
   }
 
   public static async processMessage(query: string, history: ChatMessage[] = []): Promise<string> {
+    if (!apiKey) return "请在设置中配置 ZHIPU_API_KEY 后再开始咨询。";
+    
     const { intent, entities } = await this.identifyIntent(query);
 
     let context = "";
