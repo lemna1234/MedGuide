@@ -18,7 +18,7 @@ import {
   X,
   Plus
 } from 'lucide-react';
-import { HospitalAgentService, ChatMessage } from './services/glmService';
+import { HospitalAgentService, ChatMessage } from './services/minimaxService';
 import { hospitalDepartments } from './data/hospitalData';
 
 export default function App() {

@@ -7,11 +7,15 @@ import OpenAI from "openai";
 import { hospitalDepartments, commonServiceLocations } from "../data/hospitalData";
 import { searchMedicalKnowledge } from "../data/medicalKnowledge";
 
-// 智谱 AI 兼容 OpenAI 格式
+// 使用 OpenRouter 代理访问 MiniMax
 const client = new OpenAI({
-  apiKey: process.env.GLM_API_KEY,
-  baseURL: "https://open.bigmodel.cn/api/paas/v4/",
-  dangerouslyAllowBrowser: true // 警告：仅用于预览演示
+  apiKey: process.env.MINIMAX_API_KEY,
+  baseURL: "https://openrouter.ai/api/v1",
+  dangerouslyAllowBrowser: true,
+  defaultHeaders: {
+    "HTTP-Referer": "https://ai.studio", // OpenRouter 要求的可选 Header
+    "X-Title": "MedGuide",
+  }
 });
 
 export interface ChatMessage {
@@ -25,7 +29,8 @@ interface IntentResult {
 }
 
 export class HospitalAgentService {
-  private static model = "glm-4"; // 使用 GLM-4 模型
+  // 模型标识：MiniMax-Text-01 (M2.5) 在 OpenRouter 上的 ID
+  private static model = "minimax/minimax-01"; 
 
   private static async identifyIntent(query: string): Promise<IntentResult> {
     const prompt = `你是一个专业的医院导诊台AI。请分析用户的输入，判断其意图和关键实体。
@@ -37,19 +42,21 @@ export class HospitalAgentService {
 3. MEDICAL_QA: 纯粹的医疗科普问题，如某种食物能吃吗，某种病怎么治。
 4. CHITCHAT: 闲聊或问候。
 
-请以 JSON 格式返回: { "intent": "分类名", "entities": ["关键实体1", "实体2"] }`;
+请以 JSON 格式返回，不要包含 Markdown 代码块，只需返回 JSON 对象。格式: { "intent": "分类名", "entities": ["关键实体1", "实体2"] }`;
 
     try {
       const response = await client.chat.completions.create({
         model: this.model,
         messages: [{ role: "user", content: prompt }],
-        response_format: { type: "json_object" }
+        // 部分模型不支持 response_format: json_object，改为在 prompt 中强调
       });
 
       const content = response.choices[0].message.content || '{}';
-      return JSON.parse(content) as IntentResult;
+      // 兼容可能出现的 markdown 代码块
+      const cleanJson = content.replace(/```json|```/g, '').trim();
+      return JSON.parse(cleanJson) as IntentResult;
     } catch (e) {
-      console.error("Intent Error:", e);
+      console.error("Intent Identification Error:", e);
       return { intent: 'CHITCHAT', entities: [] };
     }
   }
@@ -94,8 +101,8 @@ ${context}`;
 
       return response.choices[0].message.content || "抱歉，回复生成失败。";
     } catch (e) {
-      console.error("Process Message Error:", e);
-      return "抱歉，连接智谱 AI 失败。";
+      console.error("Chat Process Error:", e);
+      return "抱歉，连接服务器失败。请检查 API Key 配置。";
     }
   }
 }
